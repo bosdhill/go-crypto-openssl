@@ -168,8 +168,9 @@ func FIPS() bool {
 // SetFIPS enables or disables FIPS mode.
 //
 // It implements the following provider fallback logic for OpenSSL 3:
-//    - The "fips" provider is loaded if enabled=true and no loaded provider matches "fips=yes".
-//    - The "default" provider is loaded if enabled=false and no loaded provider matches "fips=no".
+//   - The "fips" provider is loaded if enabled=true and no loaded provider matches "fips=yes".
+//   - The "default" provider is loaded if enabled=false and no loaded provider matches "fips=no".
+//
 // This logic allows advanced users to define their own providers that match "fips=yes" and "fips=no" using the OpenSSL config file.
 func SetFIPS(enabled bool) error {
 	switch vMajor {
@@ -255,18 +256,20 @@ func bigToBN(x BigInt) C.GO_BIGNUM_PTR {
 	if len(x) == 0 {
 		return nil
 	}
-	return C.go_openssl_BN_lebin2bn(wbase(x), C.int(len(x)*wordBytes), nil)
+	return C.go_openssl_BN_bin2bn(wbase(x), C.int(len(x)), nil)
 }
 
 func bnToBig(bn C.GO_BIGNUM_PTR) BigInt {
 	if bn == nil {
 		return nil
 	}
-	x := make(BigInt, C.go_openssl_BN_num_bits(bn))
-	if C.go_openssl_BN_bn2lebinpad(bn, wbase(x), C.int(len(x)*wordBytes)) == 0 {
+	x := make(BigInt, (C.go_openssl_BN_num_bits(bn)+7)/8)
+	n := C.go_openssl_BN_bn2bin(bn, base(x))
+	if n == 0 {
 		panic("openssl: bignum conversion failed")
 	}
-	return x
+	// TODO: Use unsafe.Slice((*byte)(&x[0]), n) once go1.16 is no longer supported.
+	return (*(*[]byte)(unsafe.Pointer(&x)))[:n]
 }
 
 // noescape hides a pointer from escape analysis. noescape is
@@ -274,6 +277,7 @@ func bnToBig(bn C.GO_BIGNUM_PTR) BigInt {
 // output depends on the input. noescape is inlined and currently
 // compiles down to zero instructions.
 // USE CAREFULLY!
+//
 //go:nosplit
 func noescape(p unsafe.Pointer) unsafe.Pointer {
 	x := uintptr(p)
