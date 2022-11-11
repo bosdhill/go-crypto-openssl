@@ -38,7 +38,7 @@ var (
 	vMajor, vMinor int
 )
 
-// knownVersions is a list of supported and well-known libcrypto.so suffixes in decreasing version order.
+// knownVersions is a list of supported and well-known libcrypto.so suffixes in increasing version order.
 //
 // FreeBSD library version numbering does not directly align to the version of OpenSSL.
 // Its preferred search order is 11 -> 111.
@@ -46,7 +46,7 @@ var (
 // Some distributions use 1.0.0 and others (such as Debian) 1.0.2 to refer to the same OpenSSL 1.0.2 version.
 //
 // Fedora derived distros use different naming for the version 1.0.x.
-var knownVersions = [...]string{"3", "1.1", "11", "111", "1.0.2", "1.0.0", "10"}
+var knownVersions = [...]string{"10", "1.0.0", "1.0.2", "111", "11", "1.1", "3"}
 
 func errUnsuportedVersion() error {
 	return errors.New("openssl: OpenSSL version: " + strconv.Itoa(vMajor) + "." + strconv.Itoa(vMinor))
@@ -168,8 +168,9 @@ func FIPS() bool {
 // SetFIPS enables or disables FIPS mode.
 //
 // It implements the following provider fallback logic for OpenSSL 3:
-//    - The "fips" provider is loaded if enabled=true and no loaded provider matches "fips=yes".
-//    - The "default" provider is loaded if enabled=false and no loaded provider matches "fips=no".
+//   - The "fips" provider is loaded if enabled=true and no loaded provider matches "fips=yes".
+//   - The "default" provider is loaded if enabled=false and no loaded provider matches "fips=no".
+//
 // This logic allows advanced users to define their own providers that match "fips=yes" and "fips=no" using the OpenSSL config file.
 func SetFIPS(enabled bool) error {
 	switch vMajor {
@@ -274,6 +275,7 @@ func bnToBig(bn C.GO_BIGNUM_PTR) BigInt {
 // output depends on the input. noescape is inlined and currently
 // compiles down to zero instructions.
 // USE CAREFULLY!
+//
 //go:nosplit
 func noescape(p unsafe.Pointer) unsafe.Pointer {
 	x := uintptr(p)

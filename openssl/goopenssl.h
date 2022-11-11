@@ -145,3 +145,56 @@ go_openssl_EVP_CIPHER_CTX_open_wrapper(const GO_EVP_CIPHER_CTX_PTR ctx,
 
     return 1;
 };
+
+// BN_lebin2b and BN_bn2lebinpad weren't added to 1.0.2 until 1.0.2t. These implementations can be
+// used when 1.0.2 is in use.
+// See https://github.com/golang-fips/openssl-fips/pull/37
+#include <string.h> // memset
+
+static inline GO_BIGNUM_PTR
+_go_openssl_BN_lebin2bn(const unsigned char *s, int len, GO_BIGNUM_PTR ret)
+{
+	unsigned char *copy;
+	size_t i;
+	GO_BIGNUM_PTR result;
+
+	copy = malloc(len);
+	if (!copy)
+		return NULL;
+	for (i = 0; i < len; i++)
+		copy[i] = s[len - i - 1];
+
+	result = go_openssl_BN_bin2bn(copy, len, ret);
+	free(copy);
+	return result;
+}
+
+static inline int
+_go_openssl_BN_num_bytes(const GO_BIGNUM_PTR a) {
+	return ((go_openssl_BN_num_bits(a)+7)/8);
+}
+
+static inline int
+_go_openssl_BN_bn2lebinpad(const GO_BIGNUM_PTR a, unsigned char *to, int tolen)
+{
+	int size = _go_openssl_BN_num_bytes(a);
+	size_t i;
+
+	if (size > tolen)
+		return -1;
+
+	memset(to, 0, tolen - size);
+	if (go_openssl_BN_bn2bin(a, to + tolen - size) != size)
+		return -1;
+
+	/* reverse bytes */
+	for (i = 0; i < tolen / 2; i++) {
+		unsigned char tmp;
+
+		tmp = to[i];
+		to[i] = to[tolen - i - 1];
+		to[tolen - i - 1] = tmp;
+	}
+
+	return tolen;
+}

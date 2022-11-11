@@ -150,4 +150,13 @@ FOR_ALL_OPENSSL_FUNCTIONS
 #undef DEFINEFUNC_3_0
 #undef DEFINEFUNC_RENAMED_1_1
 #undef DEFINEFUNC_RENAMED_3_0
+// load BN_bn2lebinpad and BN_lebin2bn for 1.0.2
+    if (major == 1 && minor == 0) {
+        if (_g_BN_bn2lebinpad == NULL) {
+            _g_BN_bn2lebinpad = _go_openssl_BN_bn2lebinpad;
+        }
+        if (_g_BN_lebin2bn == NULL) {
+            _g_BN_lebin2bn = _go_openssl_BN_lebin2bn;
+        }
+    }
 }
